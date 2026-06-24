@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Michael Jackson</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f1117;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 0;
+    }
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: #c4b5fd;
+      text-align: center;
+      max-width: 860px;
+      word-break: break-all;
+    }
+    .player-wrap {
+      width: 100%;
+      max-width: 900px;
+      background: #1a1d27;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+    }
+    video {
+      width: 100%;
+      display: block;
+      max-height: 540px;
+      background: #000;
+    }
+    .info {
+      padding: 12px 18px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      border-top: 1px solid #2a2d3a;
+    }
+    .info span { font-size: 0.78rem; color: #6b7280; }
+    .info b { color: #a78bfa; }
+    #status {
+      margin-top: 12px;
+      font-size: 0.78rem;
+      color: #6b7280;
+      text-align: center;
+      max-width: 600px;
+      line-height: 1.5;
+    }
+    #status.error { color: #f87171; }
+    #status.ok { color: #34d399; }
+  </style>
+</head>
+<body>
+  <h1>Michael Jackson</h1>
+  <div class="player-wrap">
+    <video id="video" controls autoplay playsinline></video>
+    <div class="info">
+      <span>Player: <b>HLS.js</b></span>
+      <span id="seg-info"></span>
+      <span id="dur-info"></span>
+    </div>
+  </div>
+  <p id="status">Carregando playlist...</p>
+
+  <script>
+    const video = document.getElementById('video');
+    const status = document.getElementById('status');
+    const playlistUrl = 'playlist.m3u';
+
+    fetch(playlistUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        const blobUrl = URL.createObjectURL(blob);
+
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: false,
+            lowLatencyMode: false,
+          });
+          hls.loadSource(blobUrl);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            status.className = 'ok';
+            status.textContent = 'Playlist carregada — reproduzindo...';
+            video.play().catch(() => {});
+          });
+          hls.on(Hls.Events.ERROR, (_, data) => {
+            console.warn('HLS error', data.type, data.details, data);
+            if (data.fatal) {
+              status.className = 'error';
+              status.textContent = 'Erro fatal: ' + data.details;
+            }
+          });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = blobUrl;
+          video.addEventListener('loadedmetadata', () => {
+            status.className = 'ok';
+            status.textContent = 'Reproduzindo (player nativo)...';
+            video.play().catch(() => {});
+          });
+          video.addEventListener('error', () => {
+            status.className = 'error';
+            status.textContent = 'Erro no player nativo. Tente Chrome ou Firefox.';
+          });
+        } else {
+          status.className = 'error';
+          status.textContent = 'Seu navegador não suporta HLS. Use Chrome...';
+        }
+      });
+  </script>
+</body>
+</html>
